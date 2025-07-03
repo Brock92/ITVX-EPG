@@ -2,8 +2,11 @@ name: Update EPG
 
 on:
   schedule:
-    - cron: '0 */12 * * *'  # Every 12 hours
-  workflow_dispatch:        # Allow manual trigger
+    - cron: '0 */12 * * *'   # Every 12 hours
+  workflow_dispatch:         # Manual trigger
+
+permissions:
+  contents: write            # Allow commit if not using PAT
 
 jobs:
   update-epg:
@@ -19,12 +22,34 @@ jobs:
           python-version: '3.x'
 
       - name: Run EPG Script
-        run: python generate_epg.py
+        run: |
+          python3 <<EOF
+          import urllib.request
+          import gzip
+          import shutil
 
-      - name: Commit EPG
+          xml_url = "https://raw.githubusercontent.com/dp247/Freeview-EPG/master/epg.xml"
+          xml_filename = "guide.xml"
+          gz_filename = "guide.xml.gz"
+
+          print("Downloading EPG XML...")
+          urllib.request.urlretrieve(xml_url, xml_filename)
+
+          print("Compressing to GZ...")
+          with open(xml_filename, 'rb') as f_in:
+              with gzip.open(gz_filename, 'wb') as f_out:
+                  shutil.copyfileobj(f_in, f_out)
+
+          print("Done.")
+          EOF
+
+      - name: Commit and Push EPG
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}   # You must set this in your repo secrets
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}
           git add guide.xml.gz
-          git commit -m "Auto-update EPG `date`" || echo "No changes to commit"
+          git commit -m "Auto-update EPG $(date -u '+%Y-%m-%d %H:%M:%S UTC')" || echo "No changes"
           git push
