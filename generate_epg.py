@@ -2,19 +2,16 @@ import urllib.request
 import gzip
 import shutil
 
-# Download the EPG XML file
 xml_url = "https://raw.githubusercontent.com/dp247/Freeview-EPG/master/epg.xml"
-xml_filename = "guide.xml"
-gz_filename = "guide.xml.gz"
+xml_file = "guide.xml"
+gz_file = "guide.xml.gz"
 
-# Fetch XML
-print("Downloading EPG...")
-urllib.request.urlretrieve(xml_url, xml_filename)
+print("Downloading EPG XML...")
+urllib.request.urlretrieve(xml_url, xml_file)
 
-# Compress to .gz
-print("Compressing to .gz...")
-with open(xml_filename, 'rb') as f_in:
-    with gzip.open(gz_filename, 'wb') as f_out:
+print("Compressing to GZ...")
+with open(xml_file, 'rb') as f_in:
+    with gzip.open(gz_file, 'wb') as f_out:
         shutil.copyfileobj(f_in, f_out)
 
-print("EPG downloaded and compressed.")
+print("EPG updated successfully.")
