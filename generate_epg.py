@@ -1,17 +1,36 @@
-import urllib.request
-import gzip
-import shutil
+name: Update EPG
 
-xml_url = "https://raw.githubusercontent.com/dp247/Freeview-EPG/master/epg.xml"
-xml_file = "guide.xml"
-gz_file = "guide.xml.gz"
+on:
+  schedule:
+    - cron: '0 */12 * * *'   # Every 12 hours
+  workflow_dispatch:         # Allow manual trigger
 
-print("Downloading EPG XML...")
-urllib.request.urlretrieve(xml_url, xml_file)
+permissions:
+  contents: write
 
-print("Compressing to GZ...")
-with open(xml_file, 'rb') as f_in:
-    with gzip.open(gz_file, 'wb') as f_out:
-        shutil.copyfileobj(f_in, f_out)
+jobs:
+  update-epg:
+    runs-on: ubuntu-latest
 
-print("EPG updated successfully.")
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Download and compress EPG
+        run: python generate_epg.py
+
+      - name: Commit and push changes
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}
+          git add guide.xml.gz
+          git commit -m "Auto-update EPG $(date -u '+%Y-%m-%d %H:%M:%S UTC')" || echo "No changes to commit"
+          git push
